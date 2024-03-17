@@ -29,6 +29,14 @@ This was only done for learning purposes, as the original project is working per
 
 The only advantage of this project is that it is written in Rust, which means a single binary to deploy and very low resource usage, which is perfect for a low-power device like a Raspberry Pi Zero 2 W, which is what I use.
 
+It uses about 1% of CPU and less than 3 MB of RAM on my Raspberry Pi:
+
+```sh
+pi@raspberrypiz ~> ps -p $(pgrep teleinfo2mqtt-r) -o %cpu,%mem,rss
+%CPU %MEM   RSS
+ 1.1  0.6  2764
+```
+
 ## Caveats
 
 - Only supports "historical" Linky mode, not "standard" mode, because my Linky is in historical mode.
@@ -80,6 +88,30 @@ The usual Rust commands apply:
 ```sh
 cargo build
 cargo run
+```
+
+### Architecture
+
+The project is architected around `Stream`s from [`futures`](https://github.com/rust-lang/futures-rs).
+
+```mermaid
+---
+title: Data flow
+---
+graph TD
+    subgraph Main flow
+        buffer[Serial buffer] -->|Reader| A
+        A[SerialPort ASCII] -->|Stream| B[Teleinfo raw frame]
+        B -->|Stream| C[TeleinfoFrame struct]
+        C -->|Stream| task
+        subgraph task[Tokio async task]
+            D[MQTT publisher] -->|MQTT| E[MQTT broker]
+        end
+    end
+
+    subgraph Tokio async task
+    Z[MQTT even loop] -->Z
+    end
 ```
 
 ### Cross-compilation
