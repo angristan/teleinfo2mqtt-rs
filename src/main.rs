@@ -1,9 +1,10 @@
 use futures_util::pin_mut;
 use futures_util::stream::StreamExt;
-use rumqttc::{mqttbytes::QoS, AsyncClient, MqttOptions};
+use rumqttc::{AsyncClient, MqttOptions};
 use std::{env, time::Duration};
 use tokio::task;
 
+mod mqtt;
 mod serial;
 mod teleinfo;
 
@@ -48,21 +49,6 @@ async fn main() {
         println!("=====================");
         println!("{:?}", value);
 
-        let client_clone = client.clone();
-        task::spawn(async move {
-            let publish_res = client_clone
-                .publish(
-                    format!("teleinfo/{}", value.adco),
-                    QoS::AtLeastOnce,
-                    false,
-                    value.to_string(),
-                )
-                .await;
-
-            match publish_res {
-                Ok(_) => println!("Published"),
-                Err(e) => println!("Error: {:?}", e),
-            }
-        });
+        mqtt::publish::publish_teleinfo(&client, value);
     }
 }
