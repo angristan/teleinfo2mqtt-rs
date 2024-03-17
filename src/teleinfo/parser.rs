@@ -75,7 +75,7 @@ impl fmt::Display for TeleinfoFrame {
             self.base,
             self.base.parse::<i64>().unwrap(),
             self.ptec,
-            self.ptec[0..2].to_string(),
+            &self.ptec[0..2],
             self.iinst,
             self.iinst.parse::<i32>().unwrap(),
             self.imax,
@@ -94,7 +94,7 @@ pub fn parse_teleinfo(teleinfo: &str) -> Result<TeleinfoFrame, Box<dyn Error>> {
         let mut split = line.split_whitespace();
 
         let key = split.next().ok_or("Missing key")?;
-        if vec![0x02, 0x03].contains(&key.as_bytes()[0]) {
+        if [0x02, 0x03].contains(&key.as_bytes()[0]) {
             // Skip start and end of frame characters
             continue;
         }

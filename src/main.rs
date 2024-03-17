@@ -33,7 +33,7 @@ async fn main() {
     let (client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
 
     // We need to keep polling the event loop to make it progress
-    task::spawn(async move { while let Ok(_) = eventloop.poll().await {} });
+    task::spawn(async move { while (eventloop.poll().await).is_ok() {} });
 
     let serial_stream = serial::stream::serial_stream(serial_port);
     pin_mut!(serial_stream);
