@@ -34,6 +34,20 @@ HHPHC A ,
 MOTDETAT 000000 B
 */
 
+impl PartialEq for TeleinfoFrame {
+    fn eq(&self, other: &Self) -> bool {
+        self.adco == other.adco
+            && self.optarif == other.optarif
+            && self.isousc == other.isousc
+            && self.base == other.base
+            && self.ptec == other.ptec
+            && self.iinst == other.iinst
+            && self.imax == other.imax
+            && self.papp == other.papp
+            && self.hhphc == other.hhphc
+            && self.motdetat == other.motdetat
+    }
+}
 pub fn parse_teleinfo(teleinfo: &str) -> Result<TeleinfoFrame, Box<dyn Error>> {
     let mut teleinfo_map = HashMap::new();
     for line in teleinfo.lines() {

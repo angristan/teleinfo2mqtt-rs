@@ -52,3 +52,41 @@ pub fn frame_to_teleinfo<S: Stream<Item = String>>(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use futures_util::stream::StreamExt;
+
+    #[tokio::test]
+    async fn test_frame_to_teleinfo() {
+        let frame = "ADCO 012345678901 B\nOPTARIF BASE 0\nISOUSC 30 9\nBASE 002809718 .\nPTEC TH.. $\nIINST 002 Y\nIMAX 090 H\nPAPP 00390 -\nHHPHC A ,\nMOTDETAT 000000 B";
+        let frame_stream = futures_util::stream::iter(vec![frame.to_string()]);
+        let teleinfo_stream = frame_to_teleinfo(frame_stream);
+        let teleinfo = teleinfo_stream.collect::<Vec<_>>().await;
+        assert_eq!(
+            teleinfo,
+            vec![TeleinfoFrame {
+                adco: "012345678901".to_string(),
+                optarif: "BASE".to_string(),
+                isousc: "30".to_string(),
+                base: "002809718".to_string(),
+                ptec: "TH..".to_string(),
+                iinst: "002".to_string(),
+                imax: "090".to_string(),
+                papp: "00390".to_string(),
+                hhphc: "A".to_string(),
+                motdetat: "000000".to_string(),
+            }]
+        );
+    }
+
+    #[tokio::test]
+    async fn test_invalid_frame_to_teleinfo() {
+        let frame = "invalid";
+        let frame_stream = futures_util::stream::iter(vec![frame.to_string()]);
+        let teleinfo_stream = frame_to_teleinfo(frame_stream);
+        let teleinfo = teleinfo_stream.collect::<Vec<_>>().await;
+        assert_eq!(teleinfo, vec![]);
+    }
+}
