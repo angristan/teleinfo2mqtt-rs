@@ -2,9 +2,9 @@ use async_stream::stream;
 use futures_util::stream::Stream;
 use std::{io, time::Duration};
 
-pub fn serial_stream() -> impl Stream<Item = Vec<u8>> {
+pub fn serial_stream(port_device: String) -> impl Stream<Item = Vec<u8>> {
     stream! {
-        let port = serialport::new("/dev/ttyS0", 1200)
+        let port = serialport::new(port_device, 1200)
             .timeout(Duration::from_millis(1000)).data_bits(serialport::DataBits::Seven)
             .open();
 

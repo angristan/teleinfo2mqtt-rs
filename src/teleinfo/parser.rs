@@ -1,10 +1,10 @@
 use std::collections::HashMap;
 use std::error::Error;
-
-#[derive(Debug)]
+use std::fmt;
 
 // A teleinfo frame is a set of "information groups"
 // Each information group is a key-value pair + a checksum
+#[derive(Debug)]
 pub struct TeleinfoFrame {
     pub adco: String,     // Adresse du compteur
     pub optarif: String,  // Option tarifaire
@@ -48,6 +48,46 @@ impl PartialEq for TeleinfoFrame {
             && self.motdetat == other.motdetat
     }
 }
+
+// Hijack the Display trait to provide a JSON representation of the TeleinfoFrame
+// that is compatible with Home Assistant's MQTT integration
+impl fmt::Display for TeleinfoFrame {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            r#"{{
+"ADCO": {{"raw": "{}", "value": {}}},
+"OPTARIF": {{"raw": "{}", "value": "{}"}},
+"ISOUSC": {{"raw": "{}", "value": {}}},
+"BASE": {{"raw": "{}", "value": {}}},
+"PTEC": {{"raw": "{}", "value": "{}"}},
+"IINST": {{"raw": "{}", "value": {}}},
+"IMAX": {{"raw": "{}", "value": {}}},
+"PAPP": {{"raw": "{}", "value": {}}},
+"HHPHC": {{"raw": "{}", "value": "{}"}}
+}}"#,
+            self.adco,
+            self.adco.parse::<i64>().unwrap(),
+            self.optarif,
+            self.optarif,
+            self.isousc,
+            self.isousc.parse::<i32>().unwrap(),
+            self.base,
+            self.base.parse::<i64>().unwrap(),
+            self.ptec,
+            self.ptec[0..2].to_string(),
+            self.iinst,
+            self.iinst.parse::<i32>().unwrap(),
+            self.imax,
+            self.imax.parse::<i32>().unwrap(),
+            self.papp,
+            self.papp.parse::<i32>().unwrap(),
+            self.hhphc,
+            self.hhphc
+        )
+    }
+}
+
 pub fn parse_teleinfo(teleinfo: &str) -> Result<TeleinfoFrame, Box<dyn Error>> {
     let mut teleinfo_map = HashMap::new();
     for line in teleinfo.lines() {

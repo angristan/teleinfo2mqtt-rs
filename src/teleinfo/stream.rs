@@ -4,6 +4,7 @@ use async_stream::stream;
 use futures_util::stream::Stream;
 use futures_util::stream::StreamExt;
 
+// TODO: fix handling of first frame
 pub fn ascii_to_frames<S: Stream<Item = Vec<u8>>>(ascii_stream: S) -> impl Stream<Item = String> {
     let mut ascii_stream = Box::pin(ascii_stream);
     stream! {
