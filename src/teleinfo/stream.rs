@@ -4,34 +4,26 @@ use async_stream::stream;
 use futures_util::stream::Stream;
 use futures_util::stream::StreamExt;
 
-// TODO: fix handling of first frame
 pub fn ascii_to_frames<S: Stream<Item = Vec<u8>>>(ascii_stream: S) -> impl Stream<Item = String> {
     let mut ascii_stream = Box::pin(ascii_stream);
     stream! {
-        let mut teleinfo_buffer: Vec<String> = Vec::new();
+        let mut teleinfo_buffer: Vec<Vec<u8>> = Vec::new();
         while let Some(value) = ascii_stream.next().await {
+            teleinfo_buffer.push(value.clone());
 
-            let teleinfo = std::str::from_utf8(&value);
-            match teleinfo {
-                Ok(teleinfo) => {
-                        if teleinfo_buffer.len() >= 4 {
-                            let mut i = 0;
-                            for c in teleinfo_buffer[teleinfo_buffer.len()-4..].join("").chars() {
-                                if c == 'A' {
-                                    if teleinfo_buffer[teleinfo_buffer.len()-4..].join("").chars().skip(i).take(4).collect::<String>() == "ADCO" {
-                                        yield teleinfo_buffer[..teleinfo_buffer.len()-4].join("");
-                                        teleinfo_buffer = teleinfo_buffer[teleinfo_buffer.len()-4..].to_vec();
-                                    }
-                                }
-                                i += 1;
-                            }
-                        }
-
-
-                    teleinfo_buffer.push(teleinfo.to_string());
+            // A frame start with 0x02 and end with 0x03
+            if value == vec![0x03] {
+                if teleinfo_buffer.contains(&vec![0x02]) { // Only yield if we have a full frame
+                    yield teleinfo_buffer.
+                        iter().
+                        flat_map(|v| v.iter()).
+                        map(|b| *b as char).
+                        collect::<String>();
                 }
-                // Err(e) => eprint!("{:?}", e),
-                Err(_) => (),
+
+
+                // We reset the buffer for the next frame
+                teleinfo_buffer = Vec::new();
             }
         }
     }
@@ -43,6 +35,7 @@ pub fn frame_to_teleinfo<S: Stream<Item = String>>(
     let mut frame_stream = Box::pin(frame_stream);
     stream! {
         while let Some(value) = frame_stream.next().await {
+            println!("value frame_stream: {:?}", value);
             let teleinfo = parser::parse_teleinfo(&value);
             match teleinfo {
                 Ok(teleinfo) => {

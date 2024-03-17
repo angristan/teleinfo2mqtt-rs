@@ -92,7 +92,12 @@ pub fn parse_teleinfo(teleinfo: &str) -> Result<TeleinfoFrame, Box<dyn Error>> {
     let mut teleinfo_map = HashMap::new();
     for line in teleinfo.lines() {
         let mut split = line.split_whitespace();
+
         let key = split.next().ok_or("Missing key")?;
+        if vec![0x02, 0x03].contains(&key.as_bytes()[0]) {
+            // Skip start and end of frame characters
+            continue;
+        }
         let value = split.next().ok_or("Missing value")?;
         teleinfo_map.insert(key, value);
     }
