@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
 
-// A teleinfo frame is a set of "information groups"
-// Each information group is a key-value pair + a checksum
+// A teleinfo frame is a set of data sets
+// Each data set is a key-value pair + a checksum
 #[derive(Debug)]
 pub struct TeleinfoFrame {
     pub adco: String,     // Adresse du compteur
