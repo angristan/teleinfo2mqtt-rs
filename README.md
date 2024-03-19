@@ -29,12 +29,12 @@ This was only done for learning purposes, as the original project is working per
 
 The only advantage of this project is that it is written in Rust, which means a single binary to deploy and very low resource usage, which is perfect for a low-power device like a Raspberry Pi Zero 2 W, which is what I use.
 
-It uses about 1% of CPU and less than 3 MB of RAM on my Raspberry Pi:
+It uses less than 1% of CPU and 2-3 MB of RAM on my Raspberry Pi:
 
 ```sh
 pi@raspberrypiz ~> ps -p $(pgrep teleinfo2mqtt-r) -o %cpu,%mem,rss
 %CPU %MEM   RSS
- 1.1  0.6  2764
+ 0.5  0.5  2560
 ```
 
 ## Caveats
