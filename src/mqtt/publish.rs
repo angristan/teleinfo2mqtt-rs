@@ -9,7 +9,7 @@ pub fn publish_teleinfo(client: &AsyncClient, value: TeleinfoFrame) {
         let publish_res = client_clone
             .publish(
                 format!("teleinfo/{}", value.adco),
-                QoS::AtLeastOnce,
+                QoS::AtMostOnce,
                 false,
                 value.to_string(),
             )
