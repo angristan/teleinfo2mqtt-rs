@@ -1,8 +1,6 @@
 use futures_util::pin_mut;
 use futures_util::stream::StreamExt;
-use rumqttc::{AsyncClient, MqttOptions};
-use std::{env, time::Duration};
-use tokio::task;
+use std::env;
 
 mod mqtt;
 mod serial;
@@ -24,16 +22,13 @@ async fn main() {
         Err(_) => "/dev/ttyS0".to_string(),
     };
 
-    let mut mqttoptions = MqttOptions::new("teleinfo2mqtt-rs", mqtt_host, mqtt_port);
-    mqttoptions.set_keep_alive(Duration::from_secs(5));
+    let mut aimeqtt_options =
+        aimeqtt::client::ClientOptions::new(mqtt_host, mqtt_port).with_keep_alive(60);
     if mqtt_user.is_ok() && mqtt_pass.is_ok() {
-        mqttoptions.set_credentials(mqtt_user.unwrap(), mqtt_pass.unwrap());
+        aimeqtt_options = aimeqtt_options.with_credentials(mqtt_user.unwrap(), mqtt_pass.unwrap());
     }
 
-    let (client, mut eventloop) = AsyncClient::new(mqttoptions, 10);
-
-    // We need to keep polling the event loop to make it progress
-    task::spawn(async move { while (eventloop.poll().await).is_ok() {} });
+    let client = aimeqtt::client::new(aimeqtt_options).await;
 
     let serial_stream = serial::stream::serial_stream(serial_port);
     pin_mut!(serial_stream);
