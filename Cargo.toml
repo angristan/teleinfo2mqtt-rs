@@ -10,6 +10,7 @@
     async-stream = "0.3.5"
     bincode = "1.3.3"
     futures-util = "0.3.30"
+    rppal = "0.17.1"
     rumqttc = "0.24.0"
     serde = { version = "1.0.197", features = ["derive"] }
     serialport = "4.3.0"
