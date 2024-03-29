@@ -6,7 +6,7 @@
     # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-    aimeqtt = { git = "https://github.com/angristan/aimeqtt", rev = "846d01f" }
+    aimeqtt = { git = "https://github.com/angristan/aimeqtt", rev = "fa01364" }
     async-stream = "0.3.5"
     bincode = "1.3.3"
     futures-util = "0.3.30"

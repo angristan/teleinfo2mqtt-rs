@@ -29,7 +29,7 @@ dependencies = [
 [[package]]
 name = "aimeqtt"
 version = "0.1.0"
-source = "git+https://github.com/angristan/aimeqtt?rev=846d01f#846d01fc684f8d9057b67ee9f3988d08024e8389"
+source = "git+https://github.com/angristan/aimeqtt?rev=fa01364#fa01364bbe4d960b79b6b07655ee1aef2d1bbe9a"
 dependencies = [
  "tokio",
 ]

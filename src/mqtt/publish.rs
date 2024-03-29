@@ -10,8 +10,9 @@ const GPIO_PITINFO_GREEN_LED: u8 = 4;
 pub fn publish_teleinfo(client: &Client, value: TeleinfoFrame) {
     let client_clone = (*client).clone();
     task::spawn(async move {
-        let publish_res =
-            client_clone.publish(format!("teleinfo/{}", value.adco), value.to_string());
+        let publish_res = client_clone
+            .publish(format!("teleinfo/{}", value.adco), value.to_string())
+            .await;
 
         match publish_res {
             Ok(_) => {
