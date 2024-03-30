@@ -14,7 +14,7 @@ pub fn serial_stream(port_device: String) -> impl Stream<Item = Vec<u8>> {
 
         match port {
             Ok(mut port) => {
-                let mut serial_buf: Vec<u8> = vec![0; 1000];
+                let mut serial_buf: Vec<u8> = vec![0; 1];
                 loop {
                     match port.read(serial_buf.as_mut_slice()) {
                         Ok(t) => {
