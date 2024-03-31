@@ -59,7 +59,7 @@ async fn main() {
     let client = aimeqtt::client::new(aimeqtt_options).await;
     event!(Level::DEBUG, "MQTT client created");
 
-    let serial_stream = serial::stream::serial_stream(serial_port);
+    let serial_stream = serial::serial_stream(serial_port);
     pin_mut!(serial_stream);
 
     let teleinfo_raw_frames_stream = teleinfo::stream::ascii_to_frames(serial_stream);
@@ -70,7 +70,7 @@ async fn main() {
     pin_mut!(teleinfo_parsed_frames_stream);
 
     while let Some(value) = teleinfo_parsed_frames_stream.next().await {
-        match mqtt::publish::publish_teleinfo(&client, &value).await {
+        match mqtt::publish_teleinfo(&client, &value).await {
             Ok(_) => {
                 let mut pin = Gpio::new()
                     .unwrap()
