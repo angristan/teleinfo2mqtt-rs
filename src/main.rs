@@ -45,7 +45,7 @@ async fn main() {
     };
     let mqtt_user = env::var("MQTT_USER");
     let mqtt_pass = env::var("MQTT_PASS");
-    let serial_port = match env::var("SERIAL_PORT") {
+    let serial_device = match env::var("SERIAL_PORT") {
         Ok(port) => port,
         Err(_) => "/dev/ttyS0".to_string(),
     };
@@ -59,7 +59,7 @@ async fn main() {
     let client = aimeqtt::client::new(aimeqtt_options).await;
     event!(Level::DEBUG, "MQTT client created");
 
-    let serial_stream = serial::serial_stream(serial_port);
+    let serial_stream = serial::serial_stream(serial_device);
     pin_mut!(serial_stream);
 
     let teleinfo_raw_frames_stream = teleinfo::stream::ascii_to_frames(serial_stream);
