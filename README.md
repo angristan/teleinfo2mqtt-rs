@@ -118,7 +118,7 @@ graph TD
 
 Unfortunately, I couldn't get cross-compilation to work from macOS `aarch64-apple-darwin` to `aarch64-unknown-linux-gnu` because of the `libudev-dev` dependency on Linux.
 
-Thanks to [Orbstack Linux Machines](https://docs.orbstack.dev/machines/), I was able to run an `aaarch64` machine, so I could use the binaries directly on my Raspberry Pi Zero 2 W.
+A VS Code Dev Container is provided to have a working `rust-analyzer` and `clippy` in VSCode on macOS and to be able to compile the project on Linux.
 
 ### TeleInfo specs
 
