@@ -47,8 +47,8 @@ pi@raspberrypiz ~> ps -p $(pgrep teleinfo2mqtt-r) -o %cpu,%mem,rss
 The following environment variables are required:
 
 - `MQTT_HOST`: the MQTT broker to connect to, e.g. `192.168.1.42`
-- `MQTT_USERNAME`: the MQTT broker username
-- `MQTT_PASSWORD`: the MQTT broker password
+- `MQTT_USER`: the MQTT broker username
+- `MQTT_PASS`: the MQTT broker password
 
 The following environment variables are optional:
 
