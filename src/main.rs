@@ -2,7 +2,6 @@ use futures_util::pin_mut;
 use futures_util::stream::StreamExt;
 use rppal::gpio::Gpio;
 use std::env;
-use std::thread;
 use std::time::Duration;
 use tracing::{event, Level};
 
@@ -69,18 +68,18 @@ async fn main() {
         teleinfo::stream::frame_to_teleinfo(teleinfo_raw_frames_stream);
     pin_mut!(teleinfo_parsed_frames_stream);
 
+    let mut led_pin = Gpio::new()
+        .expect("Failed to initialize GPIO")
+        .get(GPIO_PITINFO_GREEN_LED)
+        .expect("Failed to get GPIO pin")
+        .into_output();
+
     while let Some(value) = teleinfo_parsed_frames_stream.next().await {
         match mqtt::publish_teleinfo(&client, &value).await {
             Ok(_) => {
-                let mut pin = Gpio::new()
-                    .unwrap()
-                    .get(GPIO_PITINFO_GREEN_LED)
-                    .unwrap()
-                    .into_output();
-
-                pin.set_high();
-                thread::sleep(Duration::from_millis(10));
-                pin.set_low();
+                led_pin.set_high();
+                tokio::time::sleep(Duration::from_millis(10)).await;
+                led_pin.set_low();
             }
             Err(e) => {
                 event!(Level::ERROR, error = ?e, "Error while publishing teleinfo frame to MQTT");
