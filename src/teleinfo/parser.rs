@@ -34,6 +34,39 @@ HHPHC A ,
 MOTDETAT 000000 B
 */
 
+/// Validates the checksum of a TeleInfo data set line.
+/// Format: <Label> <Value> <Checksum> (space-separated for historical mode)
+/// Checksum = (S1 & 0x3F) + 0x20, where S1 is the sum of ASCII values
+/// from label (included) to the separator before checksum (excluded).
+fn validate_checksum(line: &str) -> bool {
+    // The line format is: LABEL<sep>VALUE<sep>CHECKSUM
+    // where <sep> is either tab (0x09) or space (0x20)
+    // The checksum is calculated over "LABEL<sep>VALUE" (excluding final separator)
+
+    let bytes = line.as_bytes();
+    if bytes.is_empty() {
+        return false;
+    }
+
+    // Find the last separator (space or tab) before checksum
+    let last_sep_pos = bytes.iter().rposition(|&b| b == b' ' || b == b'\t');
+    let Some(last_sep_pos) = last_sep_pos else {
+        return false;
+    };
+
+    // Checksum is the last character
+    if last_sep_pos + 1 >= bytes.len() {
+        return false;
+    }
+    let expected_checksum = bytes[last_sep_pos + 1];
+
+    // Calculate checksum over everything up to (but not including) the last separator
+    let sum: u32 = bytes[..last_sep_pos].iter().map(|&b| b as u32).sum();
+    let calculated_checksum = ((sum & 0x3F) + 0x20) as u8;
+
+    expected_checksum == calculated_checksum
+}
+
 impl PartialEq for TeleinfoFrame {
     fn eq(&self, other: &Self) -> bool {
         self.adco == other.adco
@@ -91,13 +124,24 @@ impl fmt::Display for TeleinfoFrame {
 pub fn parse_teleinfo(teleinfo: &str) -> Result<TeleinfoFrame, Box<dyn Error>> {
     let mut teleinfo_map = HashMap::new();
     for line in teleinfo.lines() {
-        let mut split = line.split_whitespace();
-
-        let key = split.next().ok_or("Missing key")?;
-        if [0x02, 0x03].contains(&key.as_bytes()[0]) {
-            // Skip start and end of frame characters
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
             continue;
         }
+
+        // Skip lines starting with STX or ETX
+        let first_byte = trimmed.as_bytes()[0];
+        if first_byte == 0x02 || first_byte == 0x03 {
+            continue;
+        }
+
+        // Validate checksum before processing
+        if !validate_checksum(trimmed) {
+            return Err(format!("Invalid checksum for line: {}", trimmed).into());
+        }
+
+        let mut split = trimmed.split_whitespace();
+        let key = split.next().ok_or("Missing key")?;
         let value = split.next().ok_or("Missing value")?;
         teleinfo_map.insert(key, value);
     }
@@ -135,20 +179,59 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_parse_teleinfo() {
-        let teleinfo = "ADCO 012345678901 B\nOPTARIF BASE 0\nISOUSC 30 9\nBASE 002809718 .\nPTEC TH.. $\nIINST 002 Y\nIMAX 090 H\nPAPP 00390 -\nHHPHC A ,\nMOTDETAT 000000 B";
-        let parse_teleinfo = parse_teleinfo(teleinfo);
-        assert!(parse_teleinfo.is_ok());
-        let parse_teleinfo = parse_teleinfo.unwrap();
-        assert_eq!(parse_teleinfo.adco, "012345678901");
-        assert_eq!(parse_teleinfo.optarif, "BASE");
-        assert_eq!(parse_teleinfo.isousc, "30");
-        assert_eq!(parse_teleinfo.base, "002809718");
-        assert_eq!(parse_teleinfo.ptec, "TH..");
-        assert_eq!(parse_teleinfo.iinst, "002");
-        assert_eq!(parse_teleinfo.imax, "090");
-        assert_eq!(parse_teleinfo.papp, "00390");
-        assert_eq!(parse_teleinfo.hhphc, "A");
-        assert_eq!(parse_teleinfo.motdetat, "000000");
+    fn test_validate_checksum_valid() {
+        // Checksum = (sum(LABEL + SEP + VALUE) & 0x3F) + 0x20
+        assert!(validate_checksum("ADCO 012345678901 E"));
+        assert!(validate_checksum("OPTARIF BASE 0"));
+        assert!(validate_checksum("ISOUSC 30 9"));
+        assert!(validate_checksum("BASE 002809718 ."));
+        assert!(validate_checksum("PTEC TH.. $"));
+        assert!(validate_checksum("IINST 002 Y"));
+        assert!(validate_checksum("IMAX 090 H"));
+        assert!(validate_checksum("PAPP 00390 -"));
+        assert!(validate_checksum("HHPHC A ,"));
+        assert!(validate_checksum("MOTDETAT 000000 B"));
+    }
+
+    #[test]
+    fn test_validate_checksum_invalid() {
+        // Wrong checksum character
+        assert!(!validate_checksum("ADCO 012345678901 X"));
+        assert!(!validate_checksum("ISOUSC 30 Z"));
+        // Corrupted value
+        assert!(!validate_checksum("ADCO 999999999999 E"));
+    }
+
+    #[test]
+    fn test_validate_checksum_edge_cases() {
+        assert!(!validate_checksum(""));
+        assert!(!validate_checksum("NOSPACE"));
+    }
+
+    #[test]
+    fn test_parse_teleinfo_valid() {
+        let teleinfo = "ADCO 012345678901 E\nOPTARIF BASE 0\nISOUSC 30 9\nBASE 002809718 .\nPTEC TH.. $\nIINST 002 Y\nIMAX 090 H\nPAPP 00390 -\nHHPHC A ,\nMOTDETAT 000000 B";
+        let result = parse_teleinfo(teleinfo);
+        assert!(result.is_ok(), "parse failed: {:?}", result.err());
+        let frame = result.unwrap();
+        assert_eq!(frame.adco, "012345678901");
+        assert_eq!(frame.optarif, "BASE");
+        assert_eq!(frame.isousc, "30");
+        assert_eq!(frame.base, "002809718");
+        assert_eq!(frame.ptec, "TH..");
+        assert_eq!(frame.iinst, "002");
+        assert_eq!(frame.imax, "090");
+        assert_eq!(frame.papp, "00390");
+        assert_eq!(frame.hhphc, "A");
+        assert_eq!(frame.motdetat, "000000");
+    }
+
+    #[test]
+    fn test_parse_teleinfo_invalid_checksum() {
+        // Same as valid but with wrong checksum on ADCO line
+        let teleinfo = "ADCO 012345678901 X\nOPTARIF BASE 0\nISOUSC 30 9\nBASE 002809718 .\nPTEC TH.. $\nIINST 002 Y\nIMAX 090 H\nPAPP 00390 -\nHHPHC A ,\nMOTDETAT 000000 B";
+        let result = parse_teleinfo(teleinfo);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid checksum"));
     }
 }

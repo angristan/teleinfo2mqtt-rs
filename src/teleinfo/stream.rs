@@ -59,7 +59,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_frame_to_teleinfo() {
-        let frame = "ADCO 012345678901 B\nOPTARIF BASE 0\nISOUSC 30 9\nBASE 002809718 .\nPTEC TH.. $\nIINST 002 Y\nIMAX 090 H\nPAPP 00390 -\nHHPHC A ,\nMOTDETAT 000000 B";
+        let frame = "ADCO 012345678901 E\nOPTARIF BASE 0\nISOUSC 30 9\nBASE 002809718 .\nPTEC TH.. $\nIINST 002 Y\nIMAX 090 H\nPAPP 00390 -\nHHPHC A ,\nMOTDETAT 000000 B";
         let frame_stream = futures_util::stream::iter(vec![frame.to_string()]);
         let teleinfo_stream = frame_to_teleinfo(frame_stream);
         let teleinfo = teleinfo_stream.collect::<Vec<_>>().await;

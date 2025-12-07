@@ -161,7 +161,7 @@ A full frame on my Linky meter looks like this:
 
 ```
 0x02
-ADCO 012345678912 B
+ADCO 012345678912 G
 OPTARIF BASE 0
 ISOUSC 30 9
 BASE 002815235 %
