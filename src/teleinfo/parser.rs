@@ -2,6 +2,82 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
 
+/// Metadata for a TeleInfo sensor field, used for Home Assistant MQTT Discovery
+pub struct SensorMeta {
+    pub key: &'static str,
+    pub name: &'static str,
+    pub device_class: Option<&'static str>,
+    pub unit: Option<&'static str>,
+    pub state_class: Option<&'static str>,
+}
+
+/// Sensor metadata for all TeleInfo fields
+pub const SENSOR_METADATA: &[SensorMeta] = &[
+    SensorMeta {
+        key: "ADCO",
+        name: "Meter Address",
+        device_class: None,
+        unit: None,
+        state_class: None,
+    },
+    SensorMeta {
+        key: "OPTARIF",
+        name: "Tariff Option",
+        device_class: None,
+        unit: None,
+        state_class: None,
+    },
+    SensorMeta {
+        key: "ISOUSC",
+        name: "Subscribed Intensity",
+        device_class: Some("current"),
+        unit: Some("A"),
+        state_class: Some("measurement"),
+    },
+    SensorMeta {
+        key: "BASE",
+        name: "Total Energy",
+        device_class: Some("energy"),
+        unit: Some("Wh"),
+        state_class: Some("total_increasing"),
+    },
+    SensorMeta {
+        key: "PTEC",
+        name: "Current Tariff Period",
+        device_class: None,
+        unit: None,
+        state_class: None,
+    },
+    SensorMeta {
+        key: "IINST",
+        name: "Instantaneous Current",
+        device_class: Some("current"),
+        unit: Some("A"),
+        state_class: Some("measurement"),
+    },
+    SensorMeta {
+        key: "IMAX",
+        name: "Maximum Current",
+        device_class: Some("current"),
+        unit: Some("A"),
+        state_class: Some("measurement"),
+    },
+    SensorMeta {
+        key: "PAPP",
+        name: "Apparent Power",
+        device_class: Some("apparent_power"),
+        unit: Some("VA"),
+        state_class: Some("measurement"),
+    },
+    SensorMeta {
+        key: "HHPHC",
+        name: "Peak Hours Schedule",
+        device_class: None,
+        unit: None,
+        state_class: None,
+    },
+];
+
 // A teleinfo frame is a set of data sets
 // Each data set is a key-value pair + a checksum
 #[derive(Debug)]

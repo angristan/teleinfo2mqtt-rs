@@ -48,12 +48,18 @@ async fn main() {
         Ok(port) => port,
         Err(_) => "/dev/ttyS0".to_string(),
     };
+    let discovery_prefix =
+        env::var("HA_DISCOVERY_PREFIX").unwrap_or_else(|_| "homeassistant".to_string());
 
-    let mut aimeqtt_options =
-        aimeqtt::client::ClientOptions::new(mqtt_host, mqtt_port).with_keep_alive(60);
-    if mqtt_user.is_ok() && mqtt_pass.is_ok() {
-        aimeqtt_options = aimeqtt_options.with_credentials(mqtt_user.unwrap(), mqtt_pass.unwrap());
-    }
+    let aimeqtt_options = aimeqtt::client::ClientOptions::new()
+        .with_broker_host(mqtt_host)
+        .with_broker_port(mqtt_port)
+        .with_keep_alive(60);
+    let aimeqtt_options = if mqtt_user.is_ok() && mqtt_pass.is_ok() {
+        aimeqtt_options.with_credentials(mqtt_user.unwrap(), mqtt_pass.unwrap())
+    } else {
+        aimeqtt_options
+    };
 
     let client = aimeqtt::client::new(aimeqtt_options).await;
     event!(Level::DEBUG, "MQTT client created");
@@ -74,7 +80,22 @@ async fn main() {
         .expect("Failed to get GPIO pin")
         .into_output();
 
+    let mut discovery_sent = false;
+
     while let Some(value) = teleinfo_parsed_frames_stream.next().await {
+        // Publish Home Assistant discovery on first frame
+        if !discovery_sent {
+            match mqtt::publish_discovery(&client, &value.adco, &discovery_prefix).await {
+                Ok(_) => {
+                    event!(Level::INFO, "Published Home Assistant MQTT discovery");
+                    discovery_sent = true;
+                }
+                Err(e) => {
+                    event!(Level::ERROR, error = ?e, "Failed to publish discovery");
+                }
+            }
+        }
+
         match mqtt::publish_teleinfo(&client, &value).await {
             Ok(_) => {
                 led_pin.set_high();

@@ -40,20 +40,20 @@ pi@raspberrypiz ~> ps -p $(pgrep teleinfo2mqtt-r) -o %cpu,%mem,rss
 ## Caveats
 
 - Only supports "historical" Linky mode, not "standard" mode, because my Linky is in historical mode.
-- MQTT discovery for Home Assistant is not implemented
 
 ## Usage
 
 The following environment variables are required:
 
 - `MQTT_HOST`: the MQTT broker to connect to, e.g. `192.168.1.42`
-- `MQTT_USER`: the MQTT broker username
-- `MQTT_PASS`: the MQTT broker password
 
 The following environment variables are optional:
 
+- `MQTT_USER`: the MQTT broker username
+- `MQTT_PASS`: the MQTT broker password
 - `SERIAL_PORT`: the serial port to read from, defaults to `/dev/ttyS0`
 - `MQTT_PORT`: the MQTT broker port to connect to, defaults to `1883`
+- `HA_DISCOVERY_PREFIX`: the MQTT topic prefix for Home Assistant discovery, defaults to `homeassistant`
 
 The binary can then be run with:
 
@@ -74,6 +74,24 @@ My setup is as follows:
 ![Setup](docs/linky_setup.jpeg)
 
 ### Home Assistant integration
+
+The application supports [MQTT Discovery](https://www.home-assistant.io/integrations/mqtt/#mqtt-discovery), which means Home Assistant will automatically discover the Linky meter as a device with all its sensors. No manual YAML configuration is required.
+
+On startup, discovery payloads are published to `homeassistant/sensor/linky_{ADCO}/*/config` with the retain flag, so devices are rediscovered after Home Assistant restarts.
+
+The following sensors are automatically configured:
+
+| Sensor                        | Device Class     | Unit | State Class        |
+| ----------------------------- | ---------------- | ---- | ------------------ |
+| Meter Address (ADCO)          | -                | -    | -                  |
+| Tariff Option (OPTARIF)       | -                | -    | -                  |
+| Subscribed Intensity (ISOUSC) | `current`        | A    | `measurement`      |
+| Total Energy (BASE)           | `energy`         | Wh   | `total_increasing` |
+| Current Tariff Period (PTEC)  | -                | -    | -                  |
+| Instantaneous Current (IINST) | `current`        | A    | `measurement`      |
+| Maximum Current (IMAX)        | `current`        | A    | `measurement`      |
+| Apparent Power (PAPP)         | `apparent_power` | VA   | `measurement`      |
+| Peak Hours Schedule (HHPHC)   | -                | -    | -                  |
 
 ![](docs/ha_energy.png)
 
