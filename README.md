@@ -54,6 +54,8 @@ The following environment variables are optional:
 - `SERIAL_PORT`: the serial port to read from, defaults to `/dev/ttyS0`
 - `MQTT_PORT`: the MQTT broker port to connect to, defaults to `1883`
 - `HA_DISCOVERY_PREFIX`: the MQTT topic prefix for Home Assistant discovery, defaults to `homeassistant`
+- `LED_MODE`: LED behavior mode, either `frame` (blink on each frame sent) or `power` (blink rate based on current power consumption), defaults to `frame`
+- `LED_MAX_POWER_VA`: maximum power in VA for LED scaling in `power` mode, defaults to `6000` (6kVA)
 
 The binary can then be run with:
 

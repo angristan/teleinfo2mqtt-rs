@@ -2,6 +2,8 @@ use futures_util::pin_mut;
 use futures_util::stream::StreamExt;
 use rppal::gpio::Gpio;
 use std::env;
+use std::sync::atomic::{AtomicU32, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 use tracing::{event, Level};
 
@@ -10,6 +12,13 @@ mod serial;
 mod teleinfo;
 
 const GPIO_PITINFO_GREEN_LED: u8 = 4;
+const DEFAULT_MAX_POWER_VA: u32 = 6000;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+enum LedMode {
+    Frame, // Blink once per frame sent
+    Power, // Blink rate based on power consumption
+}
 
 #[tokio::main]
 async fn main() {
@@ -50,6 +59,19 @@ async fn main() {
     };
     let discovery_prefix =
         env::var("HA_DISCOVERY_PREFIX").unwrap_or_else(|_| "homeassistant".to_string());
+    let led_mode = match env::var("LED_MODE") {
+        Ok(mode) => match mode.to_lowercase().as_str() {
+            "power" => LedMode::Power,
+            _ => LedMode::Frame,
+        },
+        Err(_) => LedMode::Frame,
+    };
+    let max_power_va: u32 = env::var("LED_MAX_POWER_VA")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(DEFAULT_MAX_POWER_VA);
+
+    event!(Level::INFO, ?led_mode, max_power_va, "LED configuration");
 
     let aimeqtt_options = aimeqtt::client::ClientOptions::new()
         .with_broker_host(mqtt_host)
@@ -74,11 +96,54 @@ async fn main() {
         teleinfo::stream::frame_to_teleinfo(teleinfo_raw_frames_stream);
     pin_mut!(teleinfo_parsed_frames_stream);
 
-    let mut led_pin = Gpio::new()
-        .expect("Failed to initialize GPIO")
-        .get(GPIO_PITINFO_GREEN_LED)
-        .expect("Failed to get GPIO pin")
-        .into_output();
+    // Shared power value for LED blinking task (only used in Power mode)
+    let current_power = if led_mode == LedMode::Power {
+        Some(Arc::new(AtomicU32::new(0)))
+    } else {
+        None
+    };
+
+    // LED pin for Frame mode (owned by main loop)
+    let mut led_pin_frame = if led_mode == LedMode::Frame {
+        Some(
+            Gpio::new()
+                .expect("Failed to initialize GPIO")
+                .get(GPIO_PITINFO_GREEN_LED)
+                .expect("Failed to get GPIO pin")
+                .into_output(),
+        )
+    } else {
+        None
+    };
+
+    // Spawn LED blinking task for Power mode
+    if let Some(ref power_arc) = current_power {
+        let led_power = Arc::clone(power_arc);
+        tokio::spawn(async move {
+            let mut led_pin = Gpio::new()
+                .expect("Failed to initialize GPIO")
+                .get(GPIO_PITINFO_GREEN_LED)
+                .expect("Failed to get GPIO pin")
+                .into_output();
+
+            loop {
+                let power = led_power.load(Ordering::Relaxed);
+                let ratio = (power as f32 / max_power_va as f32).min(1.0);
+
+                // Higher power = shorter duration (200ms -> 10ms)
+                let on_duration_ms = (200.0 - ratio * 190.0) as u64;
+                // Higher power = shorter interval (2000ms -> 100ms)
+                let off_duration_ms = (1800.0 - ratio * 1710.0) as u64;
+
+                event!(Level::DEBUG, power_va = power, ratio = %format!("{:.2}", ratio), on_ms = on_duration_ms, off_ms = off_duration_ms, "LED blink");
+
+                led_pin.set_high();
+                tokio::time::sleep(Duration::from_millis(on_duration_ms)).await;
+                led_pin.set_low();
+                tokio::time::sleep(Duration::from_millis(off_duration_ms)).await;
+            }
+        });
+    }
 
     let mut discovery_sent = false;
 
@@ -96,11 +161,21 @@ async fn main() {
             }
         }
 
+        // Update current power for LED blinking rate (Power mode)
+        if let Some(ref power_arc) = current_power {
+            if let Ok(papp) = value.papp.parse::<u32>() {
+                power_arc.store(papp, Ordering::Relaxed);
+            }
+        }
+
         match mqtt::publish_teleinfo(&client, &value).await {
             Ok(_) => {
-                led_pin.set_high();
-                tokio::time::sleep(Duration::from_millis(10)).await;
-                led_pin.set_low();
+                // Blink LED on successful publish (Frame mode)
+                if let Some(ref mut led_pin) = led_pin_frame {
+                    led_pin.set_high();
+                    tokio::time::sleep(Duration::from_millis(10)).await;
+                    led_pin.set_low();
+                }
             }
             Err(e) => {
                 event!(Level::ERROR, error = ?e, "Error while publishing teleinfo frame to MQTT");
