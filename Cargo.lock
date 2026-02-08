@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "aimeqtt"
 version = "0.1.0"
-source = "git+https://github.com/angristan/aimeqtt#d7e547d170db83b87c03abfa6d3d7842b39ccad8"
+source = "git+https://github.com/angristan/aimeqtt#1af512391c669cdc0d64e80f8ac6ccab26c7474d"
 dependencies = [
  "tokio",
  "tracing",
